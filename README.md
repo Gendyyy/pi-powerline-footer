@@ -475,6 +475,8 @@ The thinking segment shows live updates when you change thinking level:
 | xhigh | `think:xhigh` | rainbow |
 | max | `think:max` | rainbow |
 
+The rainbow is the default for `high`, `xhigh`, and `max`. Override it per level with `thinkingHigh`, `thinkingXhigh`, and `thinkingMax` in `theme.json`; see [Theming](#theming).
+
 ## Path Display
 
 The path segment supports three modes:
@@ -540,6 +542,9 @@ Colors are configurable via pi's theme system. Each preset defines its own color
 | `thinkingMinimal` | `thinkingMinimal` | Thinking level (`minimal`) |
 | `thinkingLow` | `thinkingLow` | Thinking level (`low`) |
 | `thinkingMedium` | `thinkingMedium` | Thinking level (`medium`) |
+| `thinkingHigh` | `rainbow` | Thinking level (`high`) |
+| `thinkingXhigh` | `rainbow` | Thinking level (`xhigh`) |
+| `thinkingMax` | `rainbow` | Thinking level (`max`) |
 | `context` | `dim` | Context usage |
 | `contextWarn` | `warning` | Context usage >70% |
 | `contextError` | `error` | Context usage >90% |
@@ -572,6 +577,7 @@ Create `extensions/powerline-footer/theme.json` in the agent dir (`~/.pi/agent` 
 Colors can be:
 - **Theme color names**: `accent`, `muted`, `dim`, `text`, `success`, `warning`, `error`, `border`, `borderAccent`, `borderMuted`
 - **Hex colors**: `#ff5500`, `#d787af`
+- **`rainbow`**: the multi-color gradient used for the `high`, `xhigh`, and `max` thinking levels by default
 
 Icons can be any string, including `""` when you want to suppress a specific glyph entirely.
 

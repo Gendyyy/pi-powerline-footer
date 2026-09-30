@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Added
+- **Thinking level colors** — Add `thinkingHigh`, `thinkingXhigh`, and `thinkingMax` theme colors so the `high`, `xhigh`, and `max` thinking levels can use a theme color or hex instead of the rainbow. The default is still `rainbow`, and `rainbow` is now accepted as a color value. Thanks to [@jstettner](https://github.com/jstettner) for #241.
+
 ### Fixed
 - **Web frontends** — Register only the primary bar widget outside the terminal UI, so web frontends such as pi-web no longer show a row of empty Powerline panels. Thanks to [@moxuun](https://github.com/moxuun) for #238.
 
