@@ -48,6 +48,10 @@ export function matchesConfiguredShortcut(data: string, shortcut: string | null 
   return matchesKey(data, shortcut as KeyId);
 }
 
+export function matchesCtrlSStashInput(data: string): boolean {
+  return !isKeyRelease(data) && matchesKey(data, "ctrl+s");
+}
+
 export function matchesStashShortcutInput(data: string, options: { includePrintableSharpS?: boolean } = {}): boolean {
   if (isKeyRelease(data)) return false;
 

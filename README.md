@@ -314,6 +314,8 @@ A message leaves the steer path only when Jev is confident it can wait. Unsure a
 
 Use `Alt+S` / `Option+S` as a quick stash toggle while drafting. It keeps one active stash and clears the editor when stashing. Powerline listens for unambiguous Alt/Meta-S escape encodings by default. If your old terminal setup only emits the printable German sharp-S character for Option+S and you still want that to trigger stash, set `"stashSharpSShortcut": true` under `powerline`.
 
+`Ctrl+S` also toggles the stash while the editor has focus. Inside Pi's selectors it keeps its usual meaning, such as saving a default or toggling session sort.
+
 | Editor | Stash | `Alt+S` result |
 |--------|-------|----------------|
 | Has text | Empty | Stash current text, clear editor |

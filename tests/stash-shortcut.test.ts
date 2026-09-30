@@ -487,6 +487,42 @@ test("stash shortcut stays in terminal/editor fallback routing", () => {
   assert.doesNotMatch(source, /data === "\\x1b\\x7f"/);
 });
 
+test("Ctrl+S toggles the stash only from the focused editor", async () => {
+  const agentDir = mkdtempSync(join(tmpdir(), "powerline-stash-ctrl-s-"));
+  writeAgentSettings(agentDir);
+  const { extension, restoreEnv } = await loadPowerline(agentDir);
+  const { KeybindingsManager } = await import(new URL("../node_modules/@earendil-works/pi-coding-agent/dist/core/keybindings.js", import.meta.url).href);
+  const fake = createFakePi();
+  const runtime = createCtx({ cwd: agentDir, text: "draft" });
+  let editor: { handleInput(data: string): void } | undefined;
+  Object.assign(runtime.ctx.ui, {
+    setEditorComponent(factory?: (tui: object, theme: object, keys: object) => { handleInput(data: string): void }) {
+      if (factory) editor = factory({ requestRender() {}, terminal: { columns: 80, rows: 24 } }, {}, KeybindingsManager.create());
+    },
+  });
+
+  try {
+    extension(fake.pi);
+    await fake.handlers.get("session_start")?.({ reason: "resume" }, runtime.ctx);
+
+    // The global terminal hook must leave Ctrl+S to whatever has focus, such as Pi's selectors.
+    assert.equal(runtime.sendTerminalInput("\x13"), undefined);
+    assert.equal(runtime.text, "draft");
+
+    editor!.handleInput("\x13");
+    assert.equal(runtime.text, "");
+    assert.deepEqual(runtime.statuses.at(-1), ["stash", "stash"]);
+
+    editor!.handleInput("\x13");
+    assert.equal(runtime.text, "draft");
+    assert.deepEqual(runtime.statuses.at(-1), ["stash", undefined]);
+  } finally {
+    await fake.handlers.get("session_shutdown")?.({ reason: "quit" }, runtime.ctx);
+    restoreEnv();
+    fs.rmSync(agentDir, { recursive: true, force: true });
+  }
+});
+
 test("agent_end leaves an active stash untouched until explicit restore", async () => {
   const agentDir = mkdtempSync(join(tmpdir(), "powerline-stash-agent-end-"));
   const cwd = mkdtempSync(join(tmpdir(), "powerline-stash-cwd-"));

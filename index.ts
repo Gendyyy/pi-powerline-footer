@@ -43,6 +43,7 @@ import { registerCdCommand } from "./cd-command.ts";
 import {
   isSupportedSuperShortcut,
   matchesConfiguredShortcut,
+  matchesCtrlSStashInput,
   matchesStashShortcutInput,
   shortcutConflictKey,
   shortcutUsesSuper,
@@ -3353,7 +3354,9 @@ export default function powerlineFooter(pi: ExtensionAPI) {
           return;
         }
 
-        if (isStashShortcutInput(data)) {
+        // Ctrl+S is handled only here, where the editor has focus: Pi's
+        // selectors use it to save defaults and toggle session sort.
+        if (isStashShortcutInput(data) || matchesCtrlSStashInput(data)) {
           stashOrRestoreEditorText(ctx);
           return;
         }
