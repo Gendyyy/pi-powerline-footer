@@ -2,13 +2,21 @@
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-09-30
+
+### Highlights
+- Pick your own colors for the `high`, `xhigh`, and `max` thinking levels instead of the rainbow.
+- Press `Ctrl+S` in the editor to stash or restore your draft, just like `Alt+S`.
+- Web frontends such as pi-web no longer show a row of empty Powerline panels.
+- The VS Code extension and Pi Desktop no longer pop up the welcome screen as a dialog.
+
 ### Added
-- **Thinking level colors** — Add `thinkingHigh`, `thinkingXhigh`, and `thinkingMax` theme colors so the `high`, `xhigh`, and `max` thinking levels can use a theme color or hex instead of the rainbow. The default is still `rainbow`, and `rainbow` is now accepted as a color value. Thanks to [@jstettner](https://github.com/jstettner) for #241.
-- **Ctrl+S stash** — `Ctrl+S` now toggles the editor stash like `Alt+S` while the editor has focus. Pi's selectors keep their own `Ctrl+S` actions. Thanks to [@leiyangyou](https://github.com/leiyangyou) for #242.
+- **Thinking level colors** — New `thinkingHigh`, `thinkingXhigh`, and `thinkingMax` theme colors let the `high`, `xhigh`, and `max` thinking levels use a theme color or hex value. The default is still `rainbow`, and `rainbow` is now accepted as a color value. Thanks to [@jstettner](https://github.com/jstettner) for #241.
+- **Ctrl+S stash** — `Ctrl+S` now stashes and restores the editor draft like `Alt+S` while the editor has focus. Pi's selectors keep their own `Ctrl+S` actions. Thanks to [@leiyangyou](https://github.com/leiyangyou) for #242.
 
 ### Fixed
-- **Web frontends** — Register only the primary bar widget outside the terminal UI, so web frontends such as pi-web no longer show a row of empty Powerline panels. Thanks to [@moxuun](https://github.com/moxuun) for #238.
-- **RPC clients** — Show the startup welcome only in the terminal UI, so RPC clients such as the VS Code extension and Pi Desktop no longer open it as a dialog. Thanks to [@xuyuansheng](https://github.com/xuyuansheng) for #240.
+- **Web frontends** — Web frontends such as pi-web now show only the main Powerline bar instead of a row of empty panels. Thanks to [@moxuun](https://github.com/moxuun) for #238.
+- **VS Code and Pi Desktop** — The startup welcome now appears only in the terminal, so the VS Code extension and Pi Desktop no longer open it as a dialog. Thanks to [@xuyuansheng](https://github.com/xuyuansheng) for #240.
 
 ## [0.18.0] - 2026-09-26
 
