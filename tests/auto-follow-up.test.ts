@@ -29,10 +29,18 @@ async function harness(t: test.TestContext, jevAnswer: () => Response) {
   const { default: extension } = await import("../index.ts");
   const sent: unknown[][] = [];
   const warnings: string[] = [];
+  let idle = false;
+  let editorText = "";
+  const run = new AbortController();
   const ctx = {
-    cwd: root, hasUI: false,
+    cwd: root, hasUI: true, isIdle: () => idle, signal: run.signal,
     sessionManager: { getBranch: () => [], getSessionId: () => "auto-follow-up-test", getCwd: () => root },
-    ui: { notify: (message: string, level: string) => { if (level === "warning") warnings.push(message); } },
+    ui: {
+      notify: (message: string, level: string) => { if (level === "warning") warnings.push(message); },
+      setWorkingMessage() {},
+      getEditorText: () => editorText,
+      setEditorText: (text: string) => { editorText = text; },
+    },
   };
   const handlers = new Map<string, (event: object, context: typeof ctx) => unknown>();
   (extension as unknown as (api: object) => void)({
@@ -46,6 +54,10 @@ async function harness(t: test.TestContext, jevAnswer: () => Response) {
     requests,
     sent,
     warnings,
+    editorText: () => editorText,
+    typeInEditor: (text: string) => { editorText = text; },
+    pressEsc: () => { idle = true; run.abort(); },
+    finishRun: () => { idle = true; },
     input: (event: Omit<InputEvent, "type">) => handlers.get("input")!({ type: "input", ...event }, ctx),
   };
 }
@@ -69,6 +81,29 @@ test("corrections and unsure answers stay as steering", async (t) => {
     assert.equal(result, undefined);
     assert.deepEqual(h.sent, []);
   }
+});
+
+test("Esc while Jev decides returns the messages to the editor in order instead of starting a new turn", async (t) => {
+  for (const answer of [jevRoute("follow_up", 0.95), jevRoute("steer", 0.99)]) {
+    const h = await harness(t, answer);
+    const first = h.input({ text: "also lint", source: "interactive", streamingBehavior: "steer" });
+    const second = h.input({ text: "and format", source: "interactive", streamingBehavior: "steer" });
+    h.typeInEditor("draft");
+    h.pressEsc();
+    assert.deepEqual(await first, { action: "handled" });
+    assert.deepEqual(await second, { action: "handled" });
+    assert.deepEqual(h.sent, []);
+    assert.equal(h.editorText(), "also lint\n\nand format\n\ndraft");
+  }
+});
+
+test("a run that finishes on its own during the Jev call still delivers the message", async (t) => {
+  const h = await harness(t, jevRoute("follow_up", 0.95));
+  const pending = h.input({ text: "also lint", source: "interactive", streamingBehavior: "steer" });
+  h.finishRun();
+  assert.deepEqual(await pending, { action: "handled" });
+  assert.deepEqual(h.sent, [["also lint", { deliverAs: "followUp" }]]);
+  assert.equal(h.editorText(), "");
 });
 
 test("Jev failures stay as steering and say so", async (t) => {

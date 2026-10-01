@@ -2000,6 +2000,15 @@ export default function powerlineFooter(pi: ExtensionAPI) {
 
   // Serializes Jev routing so a quick second message cannot be queued before the first.
   let autoFollowUpChain: Promise<unknown> = Promise.resolve();
+  // Messages still waiting on Jev have not reached Pi's queue, so Esc cannot restore them; this list does it in submission order.
+  const routingInputs: { text: string; signal: AbortSignal; restored: boolean }[] = [];
+
+  function restoreRoutingInputs(ctx: any, signal: AbortSignal): void {
+    const inputs = routingInputs.filter((input) => input.signal === signal && !input.restored);
+    if (inputs.length === 0) return;
+    for (const input of inputs) input.restored = true;
+    ctx.ui.setEditorText([...inputs.map((input) => input.text), ctx.ui.getEditorText()].filter((text) => text.trim()).join("\n\n"));
+  }
 
   // Plain Enter while the agent works arrives as steering; move it to the follow-up queue when Jev is confident it can wait.
   pi.on("input", async (event, ctx) => {
@@ -2013,18 +2022,38 @@ export default function powerlineFooter(pi: ExtensionAPI) {
 
     const state = { currentTask: lastUserPrompt, agentLatestText: getRecentAgentContext(ctx) ?? "", newMessage: event.text };
     const generation = sessionGeneration;
+    // Only the run this message was typed into counts: the agent can also go idle by finishing normally, and that must still send.
+    const runSignal: AbortSignal | undefined = ctx.hasUI ? ctx.signal : undefined;
+    const routing = runSignal ? { text: event.text, signal: runSignal, restored: false } : undefined;
+    const onAbort = () => {
+      if (generation === sessionGeneration && routing) restoreRoutingInputs(ctx, routing.signal);
+    };
+    if (routing) {
+      routingInputs.push(routing);
+      routing.signal.addEventListener("abort", onAbort, { once: true });
+    }
     const decision = autoFollowUpChain.then(() => canWaitAsFollowUp(state, apiKey));
     autoFollowUpChain = decision.catch(() => {});
-    let followUp: boolean;
+    let followUp = false;
+    let failure: string | undefined;
     try {
       followUp = await decision;
     } catch (error) {
-      if (generation !== sessionGeneration) return;
-      ctx.ui.notify(`Auto follow-up unavailable (${error instanceof Error ? error.message : String(error)}); sent as steering`, "warning");
-      return;
+      failure = error instanceof Error ? error.message : String(error);
+    } finally {
+      if (routing) {
+        routing.signal.removeEventListener("abort", onAbort);
+        routingInputs.splice(routingInputs.indexOf(routing), 1);
+      }
     }
     // A session switch during the Jev call must not route this message into the new session.
-    if (!followUp || generation !== sessionGeneration) return;
+    if (generation !== sessionGeneration) return;
+    if (routing?.restored) return { action: "handled" };
+    if (failure !== undefined) {
+      ctx.ui.notify(`Auto follow-up unavailable (${failure}); sent as steering`, "warning");
+      return;
+    }
+    if (!followUp) return;
 
     pi.sendUserMessage(event.images?.length ? [{ type: "text", text: event.text }, ...event.images] : event.text, { deliverAs: "followUp" });
     return { action: "handled" };

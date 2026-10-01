@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- **Esc with auto follow-up** — Pressing Esc while Jev is still deciding whether a message should steer or wait no longer starts a new turn with that message. Messages still waiting on Jev go back into the editor in the order you sent them, above your draft. A run that finishes on its own still delivers the message as before.
+
 ## [0.19.0] - 2026-09-30
 
 ### Highlights
