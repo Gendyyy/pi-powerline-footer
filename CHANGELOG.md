@@ -2,8 +2,10 @@
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-02
+
 ### Fixed
-- **Esc with auto follow-up** — Pressing Esc while Jev is still deciding whether a message should steer or wait no longer starts a new turn with that message. Messages still waiting on Jev go back into the editor in the order you sent them, above your draft. A run that finishes on its own still delivers the message as before.
+- **Esc with auto follow-up** — Pressing `Esc` while Jev is still deciding whether to send your message now or after the current task no longer starts a new turn with that message. Instead, waiting messages go back into the editor in the order you sent them, above your current draft. If the task finishes without you pressing `Esc`, the message is still sent as before.
 
 ## [0.19.0] - 2026-09-30
 
