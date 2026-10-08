@@ -114,7 +114,26 @@ const SHIMMER_WIDTH = 2;
 
 // Claude Code's asterisk spinner, expanding then contracting. Pi renders custom
 // indicator frames verbatim, so the theme color is baked into each frame.
-const CLAUDE_CODE_SPINNER_FRAMES = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+//
+// The two ✳ frames carry a trailing U+FE0E variation selector, and that is load-
+// bearing. U+2733 is `Emoji` and `Extended_Pictographic` in Unicode's
+// emoji-data.txt:
+//
+//   2733..2734 ; Emoji                # E0.6 [2] (✳️..✴️)  eight-spoked asterisk..eight-pointed star
+//
+// It has no `Emoji_Presentation` default, but monospace text fonts do not cover
+// the Dingbats block at all, so renderers fall back to a color emoji font and
+// paint the frame as the green ✳️ emoji. A color glyph ignores the accent color
+// baked in below, so a monochrome spinner flashes green on that one frame. U+FE0E
+// requests the text style, which emoji-variation-sequences.txt defines for exactly
+// this purpose:
+//
+//   2733 FE0E  ; text style;  # (1.1) EIGHT SPOKED ASTERISK
+//
+// U+2733 is the only emoji-capable codepoint in this extension's glyph set; the
+// rest of the spinner (U+2722, U+2736, U+273B, U+273D) has no Emoji property and
+// needs no selector. Do not strip the U+FE0E characters.
+const CLAUDE_CODE_SPINNER_FRAMES = ["·", "✢", "✳\uFE0E", "✶", "✻", "✽", "✻", "✶", "✳\uFE0E", "✢"];
 const CLAUDE_CODE_SPINNER_INTERVAL_MS = 120;
 let workingIndicatorApplied = false;
 let workingIndicatorTheme: ThemeLike | null = null;

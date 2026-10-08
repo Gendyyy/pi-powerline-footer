@@ -134,13 +134,13 @@ test("working vibes swap the loader indicator for the Claude Code spinner", () =
     assert.deepEqual(indicatorCalls[0]?.frames, [
       "<accent>·</accent>",
       "<accent>✢</accent>",
-      "<accent>✳</accent>",
+      "<accent>✳\uFE0E</accent>",
       "<accent>✶</accent>",
       "<accent>✻</accent>",
       "<accent>✽</accent>",
       "<accent>✻</accent>",
       "<accent>✶</accent>",
-      "<accent>✳</accent>",
+      "<accent>✳\uFE0E</accent>",
       "<accent>✢</accent>",
     ]);
     assert.equal(indicatorCalls[0]?.intervalMs, 120);
@@ -152,7 +152,7 @@ test("working vibes swap the loader indicator for the Claude Code spinner", () =
     // A theme swap rebakes the frame colors.
     setVibeWorkingMessageTheme({ fg: (color, text) => `[${color}]${text}[/${color}]` });
     assert.equal(indicatorCalls.length, 2);
-    assert.equal(indicatorCalls[1]?.frames?.[2], "[accent]✳[/accent]");
+    assert.equal(indicatorCalls[1]?.frames?.[2], "[accent]✳\uFE0E[/accent]");
 
     // Pi clears its indicator options on every session teardown and rebinds
     // extensions with a fresh ui object, so a new session must reinstall it.
