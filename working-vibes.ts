@@ -89,7 +89,6 @@ interface VibeConfig {
   timeout: number;             // default: 3000ms
   refreshInterval: number;     // default: 30000ms (30s)
   promptTemplate: string;      // template with {theme}, {task}, {exclude} placeholders
-  maxLength: number;           // default: 65 chars
 }
 
 interface VibeGenContext {
@@ -230,12 +229,6 @@ function loadConfig(): VibeConfig {
       ? Math.max(0, settings.workingVibeRefreshInterval)
       : 30;
 
-  const maxLength =
-    typeof settings.workingVibeMaxLength === "number" && Number.isFinite(settings.workingVibeMaxLength)
-      ? Math.max(4, Math.floor(settings.workingVibeMaxLength))
-      : 65;
-
-
   return {
     theme,
     mode,
@@ -244,7 +237,6 @@ function loadConfig(): VibeConfig {
     timeout: 3000,
     refreshInterval: refreshSeconds * 1000,
     promptTemplate: typeof settings.workingVibePrompt === "string" ? settings.workingVibePrompt : DEFAULT_PROMPT,
-    maxLength,
   };
 }
 
@@ -416,11 +408,6 @@ function parseVibeResponse(response: string, fallback: string): string {
   
   // Remove trailing punctuation from models that haven't adapted to the prompt yet.
   vibe = stripTrailingEllipsis(vibe);
-  
-  // Enforce length limit (configurable, default 65 chars)
-  if (vibe.length > config.maxLength) {
-    vibe = vibe.slice(0, config.maxLength).trimEnd();
-  }
   
   // Final validation
   if (!vibe) {

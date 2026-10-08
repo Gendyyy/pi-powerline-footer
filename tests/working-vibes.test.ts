@@ -408,7 +408,7 @@ test("generateVibesBatch parses thinking suffix separately from model id", async
   }
 });
 
-test("on-demand vibe generation includes a system prompt for providers that require instructions", async () => {
+test("on-demand vibe generation preserves full text and includes required system prompts", async () => {
   const links = ensurePiModuleLinks();
   const home = mkdtempSync(join(tmpdir(), "powerline-vibes-home-"));
   const previousHome = process.env.HOME;
@@ -426,10 +426,11 @@ test("on-demand vibe generation includes a system prompt for providers that requ
     const model = registration.getModel("test-model");
     assert.ok(model);
 
+    const longVibe = "Engaging warp drive while stabilizing the dilithium matrix across the entire starship";
     registration.setResponses([
       (context) => {
         assert.match(context.systemPrompt ?? "", /loading messages/i);
-        return fauxAssistantMessage("Engaging warp drive...");
+        return fauxAssistantMessage(`${longVibe}...`);
       },
     ]);
 
@@ -461,12 +462,12 @@ test("on-demand vibe generation includes a system prompt for providers that requ
     });
 
     const start = Date.now();
-    while (!updates.includes("Engaging warp drive") && Date.now() - start < 1000) {
+    while (!updates.includes(longVibe) && Date.now() - start < 1000) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
     assert.equal(updates[0], "Channeling star trek");
-    assert.ok(updates.includes("Engaging warp drive"));
+    assert.ok(updates.includes(longVibe));
   } finally {
     if (previousHome === undefined) {
       delete process.env.HOME;

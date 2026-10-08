@@ -424,12 +424,11 @@ In the agent settings file:
   "workingVibeModel": "openai-codex/gpt-5.6-luna:low",     // Optional: model to use (default)
   "workingVibeFallback": "Working",                        // Optional: fallback message
   "workingVibeRefreshInterval": 30,                        // Optional: seconds between refreshes (default 30)
-  "workingVibePrompt": "Generate a {theme} loading message for: {task}",  // Optional: custom prompt template
-  "workingVibeMaxLength": 65                         // Optional: max message length (default 65)
+  "workingVibePrompt": "Generate a {theme} loading message for: {task}"  // Optional: custom prompt template
 }
 ```
 
-Working-vibe text has a subtle animated shimmer by default while Pi is working. Set `powerline.workingVibes.shimmer` to `false` to disable it. You can also set `powerline.workingVibes.color` to a Pi theme color such as `accent` or `warning`, a hex color such as `#89d281`, or `rainbow` to choose the text's base color.
+Working-vibe text has a subtle animated shimmer by default while Pi is working, and Powerline does not impose a character limit on vibe text. Set `powerline.workingVibes.shimmer` to `false` to disable it. You can also set `powerline.workingVibes.color` to a Pi theme color such as `accent` or `warning`, a hex color such as `#89d281`, or `rainbow` to choose the text's base color.
 
 ### Modes
 
