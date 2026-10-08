@@ -66,6 +66,7 @@ import {
   parseVibeGenerateArgs,
   setVibeWorkingMessageTheme,
   setVibeWorkingMessageColor,
+  setVibeWorkingMessageShimmer,
 } from "./working-vibes.ts";
 import { PowerlineQueueStore, currentQueueContext, formatQueueDeliveryText, parseCompactQueuedPrompt } from "./queue/store.ts";
 import { canWaitAsFollowUp } from "./auto-follow-up.ts";
@@ -91,7 +92,7 @@ let config: PowerlineConfig = {
   queue: { compactPromptMode: "queue" },
   sendDelayMs: 0,
   autoFollowUp: false,
-  workingVibes: {},
+  workingVibes: { shimmer: true },
 };
 
 const CUSTOM_COMPACTION_STATUS_KEY = "compact-policy";
@@ -1876,6 +1877,7 @@ export default function powerlineFooter(pi: ExtensionAPI) {
     // Initialize vibe manager (needs modelRegistry from ctx)
     initVibeManager(ctx);
     setVibeWorkingMessageColor(config.workingVibes.color);
+    setVibeWorkingMessageShimmer(config.workingVibes.shimmer);
 
     if (enabled && ctx.hasUI) {
       setupCustomEditor(ctx);

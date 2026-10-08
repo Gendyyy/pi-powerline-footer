@@ -108,6 +108,10 @@ let isStreaming = false;
 let lastVibeTime = 0;
 let workingMessageTheme: ThemeLike | null = null;
 let workingMessageColor: ColorValue | "rainbow" | undefined;
+let workingMessageShimmer = true;
+let shimmerTimer: ReturnType<typeof setInterval> | undefined;
+const SHIMMER_FRAME_MS = 90;
+const SHIMMER_WIDTH = 2;
 
 function resolveModelSpec(modelSpec: string): (ParsedModelSpec & { model: Model<string>; thinkingLevel?: VibeThinkingLevel }) | null {
   const parsed = parseModelSpec(modelSpec);
@@ -483,12 +487,56 @@ function trackRecentVibe(vibe: string): void {
   recentVibes = [vibe, ...recentVibes.filter(v => v !== vibe)].slice(0, MAX_RECENT_VIBES);
 }
 
+export function renderShimmerFrame(
+  message: string,
+  phase: number,
+  theme: ThemeLike,
+  baseColor?: ColorValue | "rainbow",
+): string {
+  const characters = Array.from(message);
+  const center = (phase % (characters.length + SHIMMER_WIDTH * 2)) - SHIMMER_WIDTH;
+  return characters.map((character, index) => {
+    if (/\s/.test(character)) return character;
+    const distance = Math.abs(index - center);
+    if (distance <= 0.5) return applyColor(theme, "text", character);
+    if (distance <= SHIMMER_WIDTH) return applyColor(theme, "accent", character);
+    if (baseColor === "rainbow") return rainbow(character);
+    return applyColor(theme, baseColor ?? "muted", character);
+  }).join("");
+}
+
+function stopShimmer(): void {
+  if (shimmerTimer) clearInterval(shimmerTimer);
+  shimmerTimer = undefined;
+}
+
 function setStyledWorkingMessage(setWorkingMessage: (msg?: string) => void, message?: string): void {
-  if (!message || !workingMessageColor || !workingMessageTheme) {
+  stopShimmer();
+  if (!message) {
     setWorkingMessage(message);
     return;
   }
 
+  if (workingMessageShimmer && workingMessageTheme) {
+    let phase = 0;
+    const render = () => {
+      try {
+        setWorkingMessage(renderShimmerFrame(message, phase++, workingMessageTheme!, workingMessageColor));
+      } catch (error) {
+        stopShimmer();
+        if (!isStaleExtensionContextError(error)) throw error;
+      }
+    };
+    render();
+    shimmerTimer = setInterval(render, SHIMMER_FRAME_MS);
+    shimmerTimer.unref?.();
+    return;
+  }
+
+  if (!workingMessageColor || !workingMessageTheme) {
+    setWorkingMessage(message);
+    return;
+  }
   setWorkingMessage(workingMessageColor === "rainbow"
     ? rainbow(message)
     : applyColor(workingMessageTheme, workingMessageColor, message));
@@ -556,6 +604,11 @@ export function setVibeWorkingMessageTheme(theme: ThemeLike): void {
 
 export function setVibeWorkingMessageColor(color: ColorValue | "rainbow" | undefined): void {
   workingMessageColor = color;
+}
+
+export function setVibeWorkingMessageShimmer(enabled: boolean): void {
+  workingMessageShimmer = enabled;
+  if (!enabled) stopShimmer();
 }
 
 export function initVibeManager(ctx: ExtensionContext): void {
@@ -645,6 +698,7 @@ export function onVibeToolCall(
 
 export function onVibeAgentEnd(setWorkingMessage: (msg?: string) => void): void {
   isStreaming = false;
+  stopShimmer();
   // Cancel any in-flight generation
   currentGeneration?.abort();
   // Reset to pi's default working message

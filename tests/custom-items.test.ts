@@ -236,7 +236,7 @@ test("parsePowerlineConfig extracts supported segment options", () => {
     time: { format: "12h", showSeconds: true },
     cost: { subscriptionDisplay: "both", currency: "CNY" },
   });
-  assert.deepEqual(config.workingVibes, { color: "rainbow" });
+  assert.deepEqual(config.workingVibes, { shimmer: true, color: "rainbow" });
   assert.deepEqual(invalidCurrency.segmentOptions, { cost: {} });
 });
 
@@ -244,8 +244,10 @@ test("parsePowerlineConfig accepts working-vibe theme colors and hex colors", ()
   const semantic = parsePowerlineConfig({ workingVibes: { color: "warning" } }, ["default"]);
   const hex = parsePowerlineConfig({ workingVibes: { color: "#89d281" } }, ["default"]);
 
-  assert.deepEqual(semantic.workingVibes, { color: "warning" });
-  assert.deepEqual(hex.workingVibes, { color: "#89d281" });
+  assert.deepEqual(semantic.workingVibes, { shimmer: true, color: "warning" });
+  assert.deepEqual(hex.workingVibes, { shimmer: true, color: "#89d281" });
+  assert.deepEqual(parsePowerlineConfig({}, ["default"]).workingVibes, { shimmer: true });
+  assert.deepEqual(parsePowerlineConfig({ workingVibes: { shimmer: false } }, ["default"]).workingVibes, { shimmer: false });
 });
 
 test("mergeSegmentOptions lets user config override preset segment defaults", () => {

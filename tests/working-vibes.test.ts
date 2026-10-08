@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { getVibeFileCount, initVibeManager, onVibeAgentEnd, onVibeAgentStart, onVibeBeforeAgentStart, parseVibeGenerateArgs, setVibeMode, setVibeModel, setVibeTheme, setVibeWorkingMessageColor, setVibeWorkingMessageTheme } from "../working-vibes.ts";
+import { getVibeFileCount, initVibeManager, onVibeAgentEnd, onVibeAgentStart, onVibeBeforeAgentStart, parseVibeGenerateArgs, renderShimmerFrame, setVibeMode, setVibeModel, setVibeTheme, setVibeWorkingMessageColor, setVibeWorkingMessageShimmer, setVibeWorkingMessageTheme } from "../working-vibes.ts";
 import { rainbow } from "../theme.ts";
 
 const FAUX_PROVIDER_PATH = new URL("../node_modules/@earendil-works/pi-ai/dist/providers/faux.js", import.meta.url).href;
@@ -71,6 +71,7 @@ test("working-vibe color styles semantic, hex, and rainbow messages", () => {
 
   try {
     initVibeManager({ modelRegistry: { find() { return undefined; } } } as any);
+    setVibeWorkingMessageShimmer(false);
     setVibeWorkingMessageTheme({
       fg(color, text) {
         return `<${color}>${text}</${color}>`;
@@ -100,7 +101,51 @@ test("working-vibe color styles semantic, hex, and rainbow messages", () => {
     onVibeBeforeAgentStart("fix a bug", (message) => defaultUpdates.push(message));
     assert.equal(defaultUpdates[0], "Channeling star trek...");
     onVibeAgentEnd(() => {});
+    setVibeWorkingMessageShimmer(true);
   } finally {
+    setVibeWorkingMessageShimmer(true);
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("working-vibe shimmer sweeps a highlight across the message", () => {
+  const theme = { fg: (color: string, text: string) => `<${color}>${text}</${color}>` };
+  const first = renderShimmerFrame("vibes", 0, theme, "muted");
+  const later = renderShimmerFrame("vibes", 4, theme, "muted");
+  assert.notEqual(first, later);
+  assert.ok(first.includes("<accent>v</accent>"));
+  assert.ok(later.includes("<text>b</text>"));
+});
+
+test("working-vibe shimmer refreshes while working and stops when the agent ends", async () => {
+  const home = mkdtempSync(join(tmpdir(), "powerline-vibes-home-"));
+  const previousHome = process.env.HOME;
+  process.env.HOME = home;
+  const updates: Array<string | undefined> = [];
+
+  try {
+    initVibeManager({ modelRegistry: { find() { return undefined; } } } as any);
+    setVibeWorkingMessageTheme({ fg: (color, text) => `<${color}>${text}</${color}>` });
+    setVibeWorkingMessageColor(undefined);
+    setVibeWorkingMessageShimmer(true);
+    setVibeTheme("star trek");
+    setVibeMode("file");
+    onVibeAgentStart();
+    onVibeBeforeAgentStart("working", (message) => updates.push(message));
+    const firstFrame = updates[0];
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    assert.ok(updates.length > 1, "animation should publish later frames");
+    assert.notEqual(updates.at(-1), firstFrame);
+
+    onVibeAgentEnd((message) => updates.push(message));
+    assert.equal(updates.at(-1), undefined);
+  } finally {
+    setVibeWorkingMessageShimmer(true);
     if (previousHome === undefined) {
       delete process.env.HOME;
     } else {
@@ -131,6 +176,7 @@ test("file vibes accept ellipsis suffixes, reject malformed entries, and normali
     ].join("\n"));
 
     initVibeManager({ modelRegistry: { find() { return undefined; } } } as any);
+    setVibeWorkingMessageShimmer(false);
     setVibeTheme("scripts");
     setVibeMode("file");
     assert.equal(getVibeFileCount("scripts"), 6);
@@ -369,7 +415,7 @@ test("on-demand vibe generation includes a system prompt for providers that requ
 
   try {
     const { fauxAssistantMessage, fauxProvider } = await importFauxProviderTools();
-    const { initVibeManager, onVibeAgentStart, onVibeBeforeAgentStart, setVibeModel, setVibeTheme } = await import("../working-vibes.ts");
+    const { initVibeManager, onVibeAgentStart, onVibeBeforeAgentStart, setVibeModel, setVibeTheme, setVibeWorkingMessageShimmer } = await import("../working-vibes.ts");
 
     const registration = fauxProvider({
       provider: "test-provider",
@@ -402,6 +448,7 @@ test("on-demand vibe generation includes a system prompt for providers that requ
         },
       },
     });
+    setVibeWorkingMessageShimmer(false);
 
     assert.equal(setVibeTheme("star trek"), true);
     assert.equal(setVibeModel("test-provider/test-model"), true);
@@ -452,6 +499,7 @@ test("on-demand vibe generation silently ignores stale contexts but logs unrelat
           },
         },
       } as any);
+      setVibeWorkingMessageShimmer(false);
       onVibeAgentStart();
       onVibeBeforeAgentStart("fix a bug", (message) => updates.push(message));
       await new Promise((resolve) => setImmediate(resolve));

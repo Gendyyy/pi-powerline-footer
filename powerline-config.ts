@@ -21,7 +21,7 @@ export interface PowerlineConfig {
   queue: { compactPromptMode: CompactPromptMode };
   sendDelayMs: number;
   autoFollowUp: boolean;
-  workingVibes: { color?: ColorValue | "rainbow" };
+  workingVibes: { color?: ColorValue | "rainbow"; shimmer: boolean };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -322,7 +322,7 @@ export function parsePowerlineConfig(value: unknown, presets: readonly StatusLin
     queue: { compactPromptMode: "queue" },
     sendDelayMs: 0,
     autoFollowUp: false,
-    workingVibes: {},
+    workingVibes: { shimmer: true },
   };
 
   const directPreset = normalizePreset(value, presets);
@@ -353,9 +353,12 @@ export function parsePowerlineConfig(value: unknown, presets: readonly StatusLin
       ? value.sendDelayMs
       : 0,
     autoFollowUp: value.autoFollowUp === true,
-    workingVibes: isRecord(value.workingVibes) && typeof value.workingVibes.color === "string" && value.workingVibes.color.trim()
-      ? { color: value.workingVibes.color.trim() as ColorValue | "rainbow" }
-      : {},
+    workingVibes: {
+      shimmer: !isRecord(value.workingVibes) || value.workingVibes.shimmer !== false,
+      ...(isRecord(value.workingVibes) && typeof value.workingVibes.color === "string" && value.workingVibes.color.trim()
+        ? { color: value.workingVibes.color.trim() as ColorValue | "rainbow" }
+        : {}),
+    },
   };
 }
 

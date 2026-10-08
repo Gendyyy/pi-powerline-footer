@@ -419,7 +419,7 @@ In the agent settings file:
 ```json
 {
   "workingVibe": "star trek",                              // Theme phrase
-  "powerline": { "workingVibes": { "color": "rainbow" } }, // Optional: Pi theme color, hex, or "rainbow"
+  "powerline": { "workingVibes": { "color": "rainbow", "shimmer": true } }, // Optional vibe styling
   "workingVibeMode": "generate",                           // "generate" (on-demand) or "file" (pre-generated)
   "workingVibeModel": "openai-codex/gpt-5.6-luna:low",     // Optional: model to use (default)
   "workingVibeFallback": "Working",                        // Optional: fallback message
@@ -429,7 +429,7 @@ In the agent settings file:
 }
 ```
 
-Set `powerline.workingVibes.color` to a Pi theme color such as `accent` or `warning`, a hex color such as `#89d281`, or `rainbow` to style each working-vibe message. Omit it to keep Pi's default muted message color.
+Working-vibe text has a subtle animated shimmer by default while Pi is working. Set `powerline.workingVibes.shimmer` to `false` to disable it. You can also set `powerline.workingVibes.color` to a Pi theme color such as `accent` or `warning`, a hex color such as `#89d281`, or `rainbow` to choose the text's base color.
 
 ### Modes
 
