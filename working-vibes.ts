@@ -112,6 +112,14 @@ let shimmerTimer: ReturnType<typeof setInterval> | undefined;
 const SHIMMER_FRAME_MS = 90;
 const SHIMMER_WIDTH = 2;
 
+// Claude Code's asterisk spinner, expanding then contracting. Pi renders custom
+// indicator frames verbatim, so the theme color is baked into each frame.
+const CLAUDE_CODE_SPINNER_FRAMES = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+const CLAUDE_CODE_SPINNER_INTERVAL_MS = 120;
+let workingIndicatorApplied = false;
+let workingIndicatorTheme: ThemeLike | null = null;
+let workingIndicatorUi: ExtensionContext["ui"] | null = null;
+
 function resolveModelSpec(modelSpec: string): (ParsedModelSpec & { model: Model<string>; thinkingLevel?: VibeThinkingLevel }) | null {
   const parsed = parseModelSpec(modelSpec);
   if (!parsed || !extensionCtx) {
@@ -590,6 +598,7 @@ async function generateAndUpdate(
 
 export function setVibeWorkingMessageTheme(theme: ThemeLike): void {
   workingMessageTheme = theme;
+  applyVibeWorkingIndicator();
 }
 
 export function setVibeWorkingMessageColor(color: ColorValue | "rainbow" | undefined): void {
@@ -601,9 +610,56 @@ export function setVibeWorkingMessageShimmer(enabled: boolean): void {
   if (!enabled) stopShimmer();
 }
 
+/**
+ * Swap pi's loader indicator for the Claude Code asterisk spinner while vibes
+ * are enabled, and restore pi's default spinner when they are not. Custom
+ * frames are rendered verbatim, so the theme color is applied here.
+ *
+ * Pi drops its indicator options on every session teardown: `resetExtensionUI`
+ * calls `setWorkingIndicator()` with no arguments. It also hands extensions a
+ * fresh `ui` object whenever it rebinds them. Keying the cache on the ui
+ * context as well as the theme re-installs the spinner after a session switch,
+ * while still skipping the repeated calls this makes on every footer render.
+ * Re-installing resets the frame animation, so calling it per render would pin
+ * the spinner to its first frame.
+ */
+export function applyVibeWorkingIndicator(): void {
+  const ui = extensionCtx?.ui;
+  if (typeof ui?.setWorkingIndicator !== "function") return;
+
+  const theme = config.theme ? workingMessageTheme : null;
+  if (!theme) {
+    if (!workingIndicatorApplied) return;
+    workingIndicatorApplied = false;
+    workingIndicatorTheme = null;
+    workingIndicatorUi = null;
+    setIndicator(ui, undefined);
+    return;
+  }
+
+  if (workingIndicatorApplied && workingIndicatorUi === ui && workingIndicatorTheme === theme) return;
+  workingIndicatorApplied = true;
+  workingIndicatorTheme = theme;
+  workingIndicatorUi = ui;
+  setIndicator(ui, {
+    frames: CLAUDE_CODE_SPINNER_FRAMES.map((frame) => applyColor(theme, "accent", frame)),
+    intervalMs: CLAUDE_CODE_SPINNER_INTERVAL_MS,
+  });
+}
+
+function setIndicator(ui: ExtensionContext["ui"], options?: { frames: string[]; intervalMs: number }): void {
+  try {
+    ui.setWorkingIndicator(options);
+  } catch (error) {
+    // A stale context means the session is gone; the next session re-applies it.
+    if (!isStaleExtensionContextError(error)) throw error;
+  }
+}
+
 export function initVibeManager(ctx: ExtensionContext): void {
   extensionCtx = ctx;
   config = loadConfig(); // Refresh config in case settings changed
+  applyVibeWorkingIndicator();
 }
 
 export function getVibeTheme(): string | null {
@@ -613,7 +669,9 @@ export function getVibeTheme(): string | null {
 export function setVibeTheme(theme: string | null): boolean {
   config = { ...config, theme };
   recentVibes = [];  // Clear recent vibes on theme change
-  return saveConfig();
+  const persisted = saveConfig();
+  applyVibeWorkingIndicator();
+  return persisted;
 }
 
 export function getVibeModel(): string {

@@ -395,7 +395,7 @@ Powerline wraps Pi's autocomplete provider so bash mode can add shell-aware sugg
 
 ## Working Vibes
 
-Transform boring "Working..." messages into themed phrases that match your style:
+Transform boring "Working..." messages into themed phrases that match your style. While vibes are on, the loader spinner becomes Claude Code's asterisk spinner (`· ✢ ✳ ✶ ✻ ✽`); `/vibe off` restores pi's default spinner:
 
 ```
 /vibe star trek    → "Running diagnostics", "Engaging warp drive"

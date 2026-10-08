@@ -113,6 +113,77 @@ test("working-vibe color styles semantic, hex, and rainbow messages", () => {
   }
 });
 
+test("working vibes swap the loader indicator for the Claude Code spinner", () => {
+  const home = mkdtempSync(join(tmpdir(), "powerline-vibes-home-"));
+  const previousHome = process.env.HOME;
+  process.env.HOME = home;
+  const indicatorCalls: Array<{ frames?: string[]; intervalMs?: number } | undefined> = [];
+  const theme = { fg: (color: string, text: string) => `<${color}>${text}</${color}>` };
+
+  try {
+    initVibeManager({
+      modelRegistry: { find() { return undefined; } },
+      ui: { setWorkingIndicator: (options: { frames?: string[]; intervalMs?: number } | undefined) => indicatorCalls.push(options) },
+    } as any);
+    indicatorCalls.length = 0;
+
+    setVibeWorkingMessageTheme(theme);
+    setVibeTheme("star trek");
+
+    assert.equal(indicatorCalls.length, 1, "enabling vibes installs the custom spinner");
+    assert.deepEqual(indicatorCalls[0]?.frames, [
+      "<accent>·</accent>",
+      "<accent>✢</accent>",
+      "<accent>✳</accent>",
+      "<accent>✶</accent>",
+      "<accent>✻</accent>",
+      "<accent>✽</accent>",
+      "<accent>✻</accent>",
+      "<accent>✶</accent>",
+      "<accent>✳</accent>",
+      "<accent>✢</accent>",
+    ]);
+    assert.equal(indicatorCalls[0]?.intervalMs, 120);
+
+    // Repeated footer renders with the same theme must not reinstall the spinner.
+    setVibeWorkingMessageTheme(theme);
+    assert.equal(indicatorCalls.length, 1);
+
+    // A theme swap rebakes the frame colors.
+    setVibeWorkingMessageTheme({ fg: (color, text) => `[${color}]${text}[/${color}]` });
+    assert.equal(indicatorCalls.length, 2);
+    assert.equal(indicatorCalls[1]?.frames?.[2], "[accent]✳[/accent]");
+
+    // Pi clears its indicator options on every session teardown and rebinds
+    // extensions with a fresh ui object, so a new session must reinstall it.
+    const rebindCalls: Array<{ frames?: string[]; intervalMs?: number } | undefined> = [];
+    initVibeManager({
+      modelRegistry: { find() { return undefined; } },
+      ui: { setWorkingIndicator: (options: { frames?: string[]; intervalMs?: number } | undefined) => rebindCalls.push(options) },
+    } as any);
+    setVibeTheme("star trek");
+    const reinstalled = rebindCalls.filter((call) => call !== undefined);
+    assert.equal(reinstalled.length, 1, "a session rebind reinstalls the spinner exactly once");
+    assert.equal(reinstalled[0]?.intervalMs, 120);
+    assert.equal(reinstalled[0]?.frames?.[0], "[accent]·[/accent]");
+
+    // Turning vibes off restores pi's default spinner on the rebound ui.
+    setVibeTheme(null);
+    assert.equal(rebindCalls.at(-1), undefined);
+    const callsAfterRestore = rebindCalls.length;
+    setVibeTheme(null);
+    assert.equal(rebindCalls.length, callsAfterRestore, "an already restored spinner is not reset twice");
+  } finally {
+    setVibeTheme(null);
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
 test("working-vibe shimmer sweeps a highlight across the message", () => {
   const theme = { fg: (color: string, text: string) => `<${color}>${text}</${color}>` };
   const first = renderShimmerFrame("vibes", 0, theme, "muted");
