@@ -43,7 +43,8 @@
   },
   "pi": {
     "extensions": [
-      "./index.ts"
+      "./index.ts",
+      "./powerline-tps.ts"
     ]
   }
 }

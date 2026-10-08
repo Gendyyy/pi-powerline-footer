@@ -161,6 +161,28 @@ You can promote any extension status key into its own dedicated powerline item. 
 
 If you still prefer the older string preset config shape, `"powerline": "default"` continues to work. String preset shorthand keeps `welcome` enabled and uses the default shortcut/cost/model display settings.
 
+### Output tokens per second
+
+This package ships a second extension, `powerline-tps.ts`, which publishes live output throughput as the `powerline-tps` status. Add it as a custom item to see it:
+
+```json
+{
+  "powerline": {
+    "customItems": [
+      {
+        "id": "tps",
+        "statusKey": "powerline-tps",
+        "position": "right",
+        "prefix": "TPS",
+        "color": "accent"
+      }
+    ]
+  }
+}
+```
+
+It matches Oh My Pi's cumulative formula — output tokens divided by total request duration. While streaming it uses provider output usage when available, otherwise it estimates from streamed text, reasoning, and tool-call content and marks the value with `~`. The final provider-usage average stays visible while Pi is idle, with a `— tok/s` placeholder before the first response. Final provider output usage includes reasoning tokens when the provider reports them.
+
 ### Disabling segments
 
 Set `powerline.disabledSegments` to hide built-in or configured custom segments from the active preset:
