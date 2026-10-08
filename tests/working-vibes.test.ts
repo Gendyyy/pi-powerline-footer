@@ -84,22 +84,22 @@ test("working-vibe color styles semantic, hex, and rainbow messages", () => {
     const semantic: Array<string | undefined> = [];
     setVibeWorkingMessageColor("warning");
     onVibeBeforeAgentStart("fix a bug", (message) => semantic.push(message));
-    assert.equal(semantic[0], "<warning>Channeling star trek...</warning>");
+    assert.equal(semantic[0], "<warning>Channeling star trek</warning>");
 
     const hex: Array<string | undefined> = [];
     setVibeWorkingMessageColor("#89d281");
     onVibeBeforeAgentStart("fix a bug", (message) => hex.push(message));
-    assert.equal(hex[0], "\x1b[38;2;137;210;129mChanneling star trek...\x1b[0m");
+    assert.equal(hex[0], "\x1b[38;2;137;210;129mChanneling star trek\x1b[0m");
 
     const rainbowUpdates: Array<string | undefined> = [];
     setVibeWorkingMessageColor("rainbow");
     onVibeBeforeAgentStart("fix a bug", (message) => rainbowUpdates.push(message));
-    assert.equal(rainbowUpdates[0], rainbow("Channeling star trek..."));
+    assert.equal(rainbowUpdates[0], rainbow("Channeling star trek"));
 
     const defaultUpdates: Array<string | undefined> = [];
     setVibeWorkingMessageColor(undefined);
     onVibeBeforeAgentStart("fix a bug", (message) => defaultUpdates.push(message));
-    assert.equal(defaultUpdates[0], "Channeling star trek...");
+    assert.equal(defaultUpdates[0], "Channeling star trek");
     onVibeAgentEnd(() => {});
     setVibeWorkingMessageShimmer(true);
   } finally {
@@ -155,7 +155,7 @@ test("working-vibe shimmer refreshes while working and stops when the agent ends
   }
 });
 
-test("file vibes accept ellipsis suffixes, reject malformed entries, and normalize to three periods", () => {
+test("file vibes strip trailing ellipses and accept entries without them", () => {
   const home = mkdtempSync(join(tmpdir(), "powerline-vibes-home-"));
   const previousHome = process.env.HOME;
   process.env.HOME = home;
@@ -179,22 +179,23 @@ test("file vibes accept ellipsis suffixes, reject malformed entries, and normali
     setVibeWorkingMessageShimmer(false);
     setVibeTheme("scripts");
     setVibeMode("file");
-    assert.equal(getVibeFileCount("scripts"), 6);
+    assert.equal(getVibeFileCount("scripts"), 7);
 
     const messages: string[] = [];
-    for (let index = 0; index < 6; index++) {
+    for (let index = 0; index < 7; index++) {
       onVibeBeforeAgentStart("test scripts", message => {
         if (message) messages.push(message);
       });
     }
     assert.deepEqual(new Set(messages), new Set([
-      "Channeling scripts...",
-      "Still working...",
-      "扩展汉字𠀀...",
-      "ひらがな...",
-      "ｶﾀｶﾅ...",
-      "한글...",
-      "注音ㄅ...",
+      "Channeling scripts",
+      "Still working",
+      "扩展汉字𠀀",
+      "ひらがな",
+      "ｶﾀｶﾅ",
+      "한글",
+      "注音ㄅ",
+      "Missing suffix",
     ]));
   } finally {
     onVibeAgentEnd(() => {});
@@ -254,8 +255,8 @@ test("generateVibesBatch includes a system prompt so faux providers can return t
     assert.equal(result.count, 2);
     assert.equal(existsSync(result.filePath), true);
     assert.deepEqual(readFileSync(result.filePath, "utf8").trim().split("\n"), [
-      "Engaging warp drive...",
-      "Running diagnostics...",
+      "Engaging warp drive",
+      "Running diagnostics",
     ]);
   } finally {
     if (previousHome === undefined) {
@@ -317,7 +318,7 @@ test("generateVibesBatch forwards resolved provider env and credential base URL"
 
     assert.equal(result.success, true);
     assert.deepEqual(readFileSync(result.filePath, "utf8").trim().split("\n"), [
-      "Signing the request...",
+      "Signing the request",
     ]);
   } finally {
     if (previousHome === undefined) {
@@ -387,14 +388,14 @@ test("generateVibesBatch parses thinking suffix separately from model id", async
 
     assert.equal(result.success, true);
     assert.deepEqual(readFileSync(result.filePath, "utf8").trim().split("\n"), [
-      "Quietly calculating...",
+      "Quietly calculating",
     ]);
 
     assert.equal(setVibeModel("test-provider/literal-model:low"), true);
     const literalResult = await generateVibesBatch("math", 1);
     assert.equal(literalResult.success, true);
     assert.deepEqual(readFileSync(literalResult.filePath, "utf8").trim().split("\n"), [
-      "Literal model selected...",
+      "Literal model selected",
     ]);
   } finally {
     if (previousHome === undefined) {
@@ -460,12 +461,12 @@ test("on-demand vibe generation includes a system prompt for providers that requ
     });
 
     const start = Date.now();
-    while (!updates.includes("Engaging warp drive...") && Date.now() - start < 1000) {
+    while (!updates.includes("Engaging warp drive") && Date.now() - start < 1000) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
-    assert.equal(updates[0], "Channeling star trek...");
-    assert.ok(updates.includes("Engaging warp drive..."));
+    assert.equal(updates[0], "Channeling star trek");
+    assert.ok(updates.includes("Engaging warp drive"));
   } finally {
     if (previousHome === undefined) {
       delete process.env.HOME;
@@ -508,12 +509,12 @@ test("on-demand vibe generation silently ignores stale contexts but logs unrelat
     };
 
     const stale = await runFailure(new Error("This extension ctx is stale after session replacement or reload."));
-    assert.deepEqual(stale.updates, ["Channeling star trek..."]);
+    assert.deepEqual(stale.updates, ["Channeling star trek"]);
     assert.deepEqual(stale.logs, []);
 
     const unrelatedError = new Error("registry unavailable");
     const unrelated = await runFailure(unrelatedError);
-    assert.deepEqual(unrelated.updates, ["Channeling star trek..."]);
+    assert.deepEqual(unrelated.updates, ["Channeling star trek"]);
     assert.deepEqual(unrelated.logs, [["[working-vibes] Generation failed:", unrelatedError]]);
   } finally {
     console.debug = originalDebug;

@@ -17,7 +17,7 @@ Customizes the default [pi](https://github.com/badlogic/pi-mono) editor with a p
 
 **Powerline Queue** — Messages typed during compaction are held by Powerline and delivered after successful compaction instead of disappearing into Pi's native queue. `/queue` provides a file-backed queue for aliases, retries, clears, and manual delivery. Active queued and blocked counts appear in the `queue` segment only when there is something to show.
 
-**Working Vibes** — AI-generated themed loading messages. Set `/vibe star trek` and your "Working..." becomes "Running diagnostics..." or "Engaging warp drive...". Supports any theme: pirate, zen, noir, cowboy, etc.
+**Working Vibes** — AI-generated themed loading messages. Set `/vibe star trek` and your "Working..." becomes "Running diagnostics" or "Engaging warp drive". Supports any theme: pirate, zen, noir, cowboy, etc.
 
 **Welcome overlay** — Branded splash screen shown as centered overlay on startup. Shows gradient logo, model info, keyboard tips, detected AGENTS.md files, effective loaded skills and prompt templates, an approximate initial system-prompt token count, and recent sessions. Auto-dismisses after 30 seconds or on any key press. Set `powerline.welcome` to `false` to disable it while keeping the footer enabled.
 
@@ -398,10 +398,10 @@ Powerline wraps Pi's autocomplete provider so bash mode can add shell-aware sugg
 Transform boring "Working..." messages into themed phrases that match your style:
 
 ```
-/vibe star trek    → "Running diagnostics...", "Engaging warp drive..."
-/vibe pirate       → "Hoisting the sails...", "Charting course..."
-/vibe zen          → "Breathing deeply...", "Finding balance..."
-/vibe noir         → "Following the trail...", "Checking the angles..."
+/vibe star trek    → "Running diagnostics", "Engaging warp drive"
+/vibe pirate       → "Hoisting the sails", "Charting course"
+/vibe zen          → "Breathing deeply", "Finding balance"
+/vibe noir         → "Following the trail", "Checking the angles"
 /vibe              → Shows current theme, mode, and model
 /vibe off          → Disables (back to "Working...")
 /vibe model        → Shows current model

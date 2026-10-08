@@ -61,7 +61,7 @@ async function completeVibe(
 
 const DEFAULT_MODEL = "openai-codex/gpt-5.6-luna:low";
 
-const DEFAULT_PROMPT = `Generate a 2-4 word "{theme}" themed loading message ending in exactly three periods ("...") to signal that narration is continuing.
+const DEFAULT_PROMPT = `Generate a 2-4 word "{theme}" themed loading message without trailing punctuation.
 
 Task: {task}
 
@@ -71,7 +71,7 @@ The message should hint at the task using theme vocabulary.
 Output only the message, nothing else.`;
 
 const BATCH_PROMPT = `Generate {count} unique 2-4 word loading messages for a "{theme}" theme.
-Each message should end with "..."
+Do not add trailing punctuation.
 Be creative, varied, and thematic. No duplicates.
 Output one message per line, nothing else. No numbering, no bullets.`;
 
@@ -302,9 +302,9 @@ function getVibeFilePath(theme: string): string {
   return join(getVibesDir(), filename);
 }
 
-// Always end working messages with three ASCII periods to signal that narration continues.
-function normalizeEllipsis(text: string): string {
-  return text.replace(/[.\u2026]+$/g, "") + "...";
+// Strip trailing ellipses from older vibe files and models that still return them.
+function stripTrailingEllipsis(text: string): string {
+  return text.replace(/[.\u2026]+$/g, "").trimEnd();
 }
 
 function loadVibesFromFile(theme: string): string[] {
@@ -315,10 +315,8 @@ function loadVibesFromFile(theme: string): string[] {
     const content = readFileSync(filePath, "utf-8");
     return content
       .split("\n")
-      .map(line => line.trim())
-      .filter(line => /(?:\.\.\.|\u2026+)$/.test(line))
-      .map(normalizeEllipsis)
-      .filter(line => line !== "..." && line !== "\u2026\u2026");
+      .map(line => stripTrailingEllipsis(line.trim()))
+      .filter(line => line.length > 0);
   } catch (error) {
     console.debug(`[working-vibes] Failed to load vibe file ${filePath}:`, error);
     return [];
@@ -349,7 +347,7 @@ function mulberry32(seed: number): () => number {
 
 // Get vibe at index using seeded shuffle (no-repeat until all used)
 function getVibeAtIndex(vibes: string[], index: number, seed: number): string {
-  if (vibes.length === 0) return normalizeEllipsis(config.fallback);
+  if (vibes.length === 0) return stripTrailingEllipsis(config.fallback);
   
   // For small lists or when we've cycled through, just use modulo
   const effectiveIndex = index % vibes.length;
@@ -368,7 +366,7 @@ function getVibeAtIndex(vibes: string[], index: number, seed: number): string {
 }
 
 function getNextVibeFromFile(): string {
-  if (!config.theme) return normalizeEllipsis(config.fallback);
+  if (!config.theme) return stripTrailingEllipsis(config.fallback);
   
   // Load/reload cache if theme changed
   if (vibeCacheTheme !== config.theme) {
@@ -379,7 +377,7 @@ function getNextVibeFromFile(): string {
   }
   
   if (vibeCache.length === 0) {
-    return normalizeEllipsis(config.fallback);
+    return stripTrailingEllipsis(config.fallback);
   }
   
   const vibe = getVibeAtIndex(vibeCache, vibeIndex, vibeSeed);
@@ -408,7 +406,7 @@ function buildVibePrompt(ctx: VibeGenContext): string {
 }
 
 function parseVibeResponse(response: string, fallback: string): string {
-  if (!response) return normalizeEllipsis(fallback);
+  if (!response) return stripTrailingEllipsis(fallback);
   
   // Take only the first line (AI sometimes adds explanations)
   let vibe = response.trim().split('\n')[0].trim();
@@ -416,17 +414,17 @@ function parseVibeResponse(response: string, fallback: string): string {
   // Remove quotes if model wrapped the response
   vibe = vibe.replace(/^["']|["']$/g, "");
   
-  // Normalize trailing ellipsis to the script-appropriate form
-  vibe = normalizeEllipsis(vibe);
+  // Remove trailing punctuation from models that haven't adapted to the prompt yet.
+  vibe = stripTrailingEllipsis(vibe);
   
   // Enforce length limit (configurable, default 65 chars)
   if (vibe.length > config.maxLength) {
-    vibe = normalizeEllipsis(vibe.slice(0, config.maxLength - 3));
+    vibe = vibe.slice(0, config.maxLength).trimEnd();
   }
   
   // Final validation
-  if (!vibe || vibe === "..." || vibe === "\u2026\u2026") {
-    return normalizeEllipsis(fallback);
+  if (!vibe) {
+    return stripTrailingEllipsis(fallback);
   }
   
   return vibe;
@@ -452,13 +450,13 @@ async function generateVibe(
   signal: AbortSignal,
 ): Promise<string> {
   if (!extensionCtx) {
-    return normalizeEllipsis(config.fallback);
+    return stripTrailingEllipsis(config.fallback);
   }
   
   const resolvedModel = resolveModelSpec(config.modelSpec);
   if (!resolvedModel) {
     console.debug(`[working-vibes] Model not found: ${config.modelSpec}`);
-    return normalizeEllipsis(config.fallback);
+    return stripTrailingEllipsis(config.fallback);
   }
   const { provider, model, thinkingLevel } = resolvedModel;
   
@@ -466,7 +464,7 @@ async function generateVibe(
   const auth = await extensionCtx.modelRegistry.getApiKeyAndHeaders(model);
   if (!auth.ok) {
     console.debug(`[working-vibes] Auth failed for ${provider}: ${auth.error}`);
-    return normalizeEllipsis(config.fallback);
+    return stripTrailingEllipsis(config.fallback);
   }
   
   const aiContext = buildAiContext(buildVibePrompt(ctx));
@@ -481,7 +479,7 @@ async function generateVibe(
 
 function trackRecentVibe(vibe: string): void {
   // Don't track fallback messages
-  if (vibe === normalizeEllipsis(config.fallback)) return;
+  if (vibe === stripTrailingEllipsis(config.fallback)) return;
   
   // Add to front, remove duplicates
   recentVibes = [vibe, ...recentVibes.filter(v => v !== vibe)].slice(0, MAX_RECENT_VIBES);
@@ -644,7 +642,7 @@ export function onVibeBeforeAgentStart(
   
   // Queue themed placeholder BEFORE agent_start creates the loader
   // This sets pendingWorkingMessage which is applied when loader is created
-  setStyledWorkingMessage(setWorkingMessage, normalizeEllipsis(`Channeling ${config.theme}`));
+  setStyledWorkingMessage(setWorkingMessage, `Channeling ${config.theme}`);
   
   // Mark vibe generation time for rate limiting
   lastVibeTime = Date.now();
@@ -812,10 +810,10 @@ export async function generateVibesBatch(
         // Clean up each line
         let vibe = line.replace(/^["'\d.\-)\s]+/, "").trim();  // Remove leading quotes, numbers, bullets
         vibe = vibe.replace(/["']$/g, "");  // Remove trailing quotes
-        vibe = normalizeEllipsis(vibe);  // Script-appropriate ellipsis
+        vibe = stripTrailingEllipsis(vibe);
         return vibe;
       })
-      .filter(vibe => vibe.length > 3 && vibe !== "...");  // Filter invalid
+      .filter(vibe => vibe.length > 0);  // Filter invalid messages after punctuation cleanup.
     
     if (vibes.length === 0) {
       return { success: false, count: 0, filePath, error: "No valid vibes generated" };
