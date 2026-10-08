@@ -42,7 +42,7 @@ Customizes the default [pi](https://github.com/badlogic/pi-mono) editor with a p
 ## Installation
 
 ```bash
-pi install npm:pi-powerline-footer
+pi install npm:@agendy/pi-powerline-footer
 ```
 
 Restart pi to activate.
