@@ -2151,32 +2151,21 @@ export default function powerlineFooter(pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
     dismissWelcome(ctx);
     if (ctx.hasUI) {
-      // Extract recent agent context from session for richer vibe generation
-      const agentContext = getRecentAgentContext(ctx);
-      onVibeToolCall(event.toolName, event.input, ctx.ui.setWorkingMessage, agentContext);
+      onVibeToolCall(event.toolName, event.input, ctx.ui.setWorkingMessage);
     }
   });
 
-  // Helper to extract recent agent response text (skipping thinking blocks)
+  // Used only by Jev routing; vibe refreshes rely on the live tool-call event instead.
   function getRecentAgentContext(ctx: any): string | undefined {
     const sessionEvents = ctx.sessionManager?.getBranch?.() ?? [];
-
-    // Find the most recent assistant message
     for (let i = sessionEvents.length - 1; i >= 0; i--) {
-      const e = sessionEvents[i];
-      if (e.type === "message" && e.message?.role === "assistant") {
-        const content = e.message.content;
-        if (!Array.isArray(content)) continue;
-
-        // Extract text content, skip thinking blocks
-        for (const block of content) {
-          if (block.type === "text" && block.text) {
-            // Return first ~200 chars of non-empty text
-            const text = block.text.trim();
-            if (text.length > 0) {
-              return text.slice(0, 200);
-            }
-          }
+      const event = sessionEvents[i];
+      if (event.type !== "message" || event.message?.role !== "assistant") continue;
+      const content = event.message.content;
+      if (!Array.isArray(content)) continue;
+      for (const block of content) {
+        if (block.type === "text" && typeof block.text === "string" && block.text.trim()) {
+          return block.text.trim().slice(0, 200);
         }
       }
     }

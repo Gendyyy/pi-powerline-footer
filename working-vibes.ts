@@ -495,6 +495,11 @@ function stopShimmer(): void {
   shimmerTimer = undefined;
 }
 
+function cancelCurrentGeneration(): void {
+  currentGeneration?.abort();
+  currentGeneration = null;
+}
+
 function setStyledWorkingMessage(setWorkingMessage: (msg?: string) => void, message?: string): void {
   stopShimmer();
   if (!message) {
@@ -531,6 +536,20 @@ function updateVibeFromFile(setWorkingMessage: (msg?: string) => void): void {
   setStyledWorkingMessage(setWorkingMessage, getNextVibeFromFile());
 }
 
+function describeToolAction(toolName: string, toolInput: Record<string, unknown>): string {
+  const path = typeof toolInput.path === "string" ? toolInput.path : undefined;
+  const command = typeof toolInput.command === "string" ? toolInput.command : undefined;
+  const query = typeof toolInput.query === "string" ? toolInput.query : undefined;
+
+  if (toolName === "read" && path) return `Reading file: ${path}`;
+  if (toolName === "write" && path) return `Writing file: ${path}`;
+  if (toolName === "edit" && path) return `Editing file: ${path}`;
+  if ((toolName === "bash" || toolName === "shell") && command) return `Running command: ${command}`;
+  if (query) return `Searching for: ${query}`;
+
+  return `Using ${toolName} tool`;
+}
+
 async function generateAndUpdate(
   prompt: string, 
   setWorkingMessage: (msg?: string) => void,
@@ -545,7 +564,7 @@ async function generateAndUpdate(
   // Cancel any in-flight generation and create new controller
   // Capture in local variable to avoid race condition with subsequent calls
   const controller = new AbortController();
-  currentGeneration?.abort();
+  cancelCurrentGeneration();
   currentGeneration = controller;
   
   // Create timeout signal (3 seconds)
@@ -646,37 +665,19 @@ export function onVibeToolCall(
   toolName: string,
   toolInput: Record<string, unknown>,
   setWorkingMessage: (msg?: string) => void,
-  agentContext?: string,  // Optional: recent agent response text for richer context
 ): void {
   // Skip if no theme, not streaming, or no extensionCtx
   if (!config.theme || !extensionCtx || !isStreaming) return;
   
-  // Rate limit: skip if not enough time has passed
+  const hint = describeToolAction(toolName, toolInput);
+  // A late response for the previous action must not overwrite this live update.
+  cancelCurrentGeneration();
+  setStyledWorkingMessage(setWorkingMessage, hint);
+
+  // Keep expensive generated refreshes rate-limited, but always show the live tool action.
   const now = Date.now();
-  if (now - lastVibeTime < config.refreshInterval) return;
+  if (now - lastVibeTime < config.refreshInterval || config.mode === "file") return;
   
-  // Prefer agent context if provided (richer, more contextual)
-  // Fall back to tool-based hint
-  let hint: string;
-  if (agentContext && agentContext.length > 10) {
-    // Use first ~150 chars of agent context
-    hint = agentContext.slice(0, 150);
-  } else {
-    // Build hint from tool name and input
-    hint = `using ${toolName} tool`;
-    if (toolName === "read" && toolInput.path) {
-      hint = `reading file: ${toolInput.path}`;
-    } else if (toolName === "write" && toolInput.path) {
-      hint = `writing file: ${toolInput.path}`;
-    } else if (toolName === "edit" && toolInput.path) {
-      hint = `editing file: ${toolInput.path}`;
-    } else if (toolName === "bash" && toolInput.command) {
-      const cmd = String(toolInput.command).slice(0, 40);
-      hint = `running command: ${cmd}`;
-    }
-  }
-  
-  // Update time and generate new vibe
   lastVibeTime = now;
   generateAndUpdate(hint, setWorkingMessage);
 }
@@ -685,7 +686,7 @@ export function onVibeAgentEnd(setWorkingMessage: (msg?: string) => void): void 
   isStreaming = false;
   stopShimmer();
   // Cancel any in-flight generation
-  currentGeneration?.abort();
+  cancelCurrentGeneration();
   // Reset to pi's default working message
   setWorkingMessage(undefined);
 }

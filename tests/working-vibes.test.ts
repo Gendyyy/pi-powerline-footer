@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { getVibeFileCount, initVibeManager, onVibeAgentEnd, onVibeAgentStart, onVibeBeforeAgentStart, parseVibeGenerateArgs, renderShimmerFrame, setVibeMode, setVibeModel, setVibeTheme, setVibeWorkingMessageColor, setVibeWorkingMessageShimmer, setVibeWorkingMessageTheme } from "../working-vibes.ts";
+import { getVibeFileCount, initVibeManager, onVibeAgentEnd, onVibeAgentStart, onVibeBeforeAgentStart, onVibeToolCall, parseVibeGenerateArgs, renderShimmerFrame, setVibeMode, setVibeModel, setVibeTheme, setVibeWorkingMessageColor, setVibeWorkingMessageShimmer, setVibeWorkingMessageTheme } from "../working-vibes.ts";
 import { rainbow } from "../theme.ts";
 
 const FAUX_PROVIDER_PATH = new URL("../node_modules/@earendil-works/pi-ai/dist/providers/faux.js", import.meta.url).href;
@@ -413,6 +413,8 @@ test("on-demand vibe generation preserves full text and includes required system
   const home = mkdtempSync(join(tmpdir(), "powerline-vibes-home-"));
   const previousHome = process.env.HOME;
   process.env.HOME = home;
+  mkdirSync(join(home, ".pi", "agent"), { recursive: true });
+  writeFileSync(join(home, ".pi", "agent", "settings.json"), JSON.stringify({ workingVibeRefreshInterval: 0 }));
 
   try {
     const { fauxAssistantMessage, fauxProvider } = await importFauxProviderTools();
@@ -427,10 +429,21 @@ test("on-demand vibe generation preserves full text and includes required system
     assert.ok(model);
 
     const longVibe = "Engaging warp drive while stabilizing the dilithium matrix across the entire starship";
+    let finishOldResponse: (() => void) | undefined;
     registration.setResponses([
       (context) => {
         assert.match(context.systemPrompt ?? "", /loading messages/i);
+        assert.match((context.messages[0] as any).content[0].text, /fix a bug/);
         return fauxAssistantMessage(`${longVibe}...`);
+      },
+      () => new Promise((resolve) => {
+        finishOldResponse = () => resolve(fauxAssistantMessage("Old action result..."));
+      }),
+      (context) => {
+        const prompt = (context.messages[0] as any).content[0].text as string;
+        assert.match(prompt, /reading file: src\/current\.ts/i);
+        assert.doesNotMatch(prompt, /old action from a previous turn/i);
+        return fauxAssistantMessage("Inspecting current source...");
       },
     ]);
 
@@ -468,7 +481,27 @@ test("on-demand vibe generation preserves full text and includes required system
 
     assert.equal(updates[0], "Channeling star trek");
     assert.ok(updates.includes(longVibe));
+
+    onVibeToolCall("bash", { command: "npm run obsolete-check" }, (message) => updates.push(message));
+    const oldCallStart = Date.now();
+    while ((!finishOldResponse || registration.state.callCount < 2) && Date.now() - oldCallStart < 1000) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.ok(finishOldResponse, "the old-action generation should be pending");
+
+    onVibeToolCall("read", { path: "src/current.ts" }, (message) => updates.push(message));
+    assert.equal(updates.at(-1), "Reading file: src/current.ts");
+    const toolCallStart = Date.now();
+    while ((!updates.includes("Inspecting current source") || registration.state.callCount < 3) && Date.now() - toolCallStart < 1000) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    assert.ok(updates.includes("Inspecting current source"));
+
+    finishOldResponse();
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.ok(!updates.includes("Old action result"), "a late old-action response must not overwrite the current action");
   } finally {
+    onVibeAgentEnd(() => {});
     if (previousHome === undefined) {
       delete process.env.HOME;
     } else {
