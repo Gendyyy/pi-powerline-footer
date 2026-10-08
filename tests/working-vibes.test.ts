@@ -110,7 +110,7 @@ test("working-vibe color styles semantic, hex, and rainbow messages", () => {
   }
 });
 
-test("file vibes accept ellipsis suffixes, reject malformed entries, and use script-appropriate ellipses", () => {
+test("file vibes accept ellipsis suffixes, reject malformed entries, and normalize to three periods", () => {
   const home = mkdtempSync(join(tmpdir(), "powerline-vibes-home-"));
   const previousHome = process.env.HOME;
   process.env.HOME = home;
@@ -144,11 +144,11 @@ test("file vibes accept ellipsis suffixes, reject malformed entries, and use scr
     assert.deepEqual(new Set(messages), new Set([
       "Channeling scripts...",
       "Still working...",
-      "扩展汉字𠀀……",
-      "ひらがな……",
-      "ｶﾀｶﾅ……",
-      "한글……",
-      "注音ㄅ……",
+      "扩展汉字𠀀...",
+      "ひらがな...",
+      "ｶﾀｶﾅ...",
+      "한글...",
+      "注音ㄅ...",
     ]));
   } finally {
     onVibeAgentEnd(() => {});

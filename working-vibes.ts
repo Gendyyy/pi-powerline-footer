@@ -61,7 +61,7 @@ async function completeVibe(
 
 const DEFAULT_MODEL = "openai-codex/gpt-5.6-luna:low";
 
-const DEFAULT_PROMPT = `Generate a 2-4 word "{theme}" themed loading message ending in "...".
+const DEFAULT_PROMPT = `Generate a 2-4 word "{theme}" themed loading message ending in exactly three periods ("...") to signal that narration is continuing.
 
 Task: {task}
 
@@ -298,13 +298,9 @@ function getVibeFilePath(theme: string): string {
   return join(getVibesDir(), filename);
 }
 
-// Normalize the trailing ellipsis to the script-appropriate form: CJK text
-// keeps "\u2026\u2026" (standard six-dot Chinese/Japanese ellipsis), Latin text
-// gets "...". Collapses any trailing run of ASCII dots and Unicode "\u2026"
-// first, so mixed endings like "\u2026\u2026..." never double up.
+// Always end working messages with three ASCII periods to signal that narration continues.
 function normalizeEllipsis(text: string): string {
-  const cjk = /[\p{Script_Extensions=Han}\p{Script_Extensions=Hiragana}\p{Script_Extensions=Katakana}\p{Script_Extensions=Hangul}\p{Script_Extensions=Bopomofo}]/u.test(text);
-  return text.replace(/[.\u2026]+$/g, "") + (cjk ? "\u2026\u2026" : "...");
+  return text.replace(/[.\u2026]+$/g, "") + "...";
 }
 
 function loadVibesFromFile(theme: string): string[] {
