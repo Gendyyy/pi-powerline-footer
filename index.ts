@@ -2151,7 +2151,7 @@ export default function powerlineFooter(pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
     dismissWelcome(ctx);
     if (ctx.hasUI) {
-      onVibeToolCall(event.toolName, event.input, ctx.ui.setWorkingMessage);
+      onVibeToolCall(getRecentAgentContext(ctx), ctx.ui.setWorkingMessage);
     }
   });
 

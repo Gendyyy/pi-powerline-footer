@@ -536,20 +536,6 @@ function updateVibeFromFile(setWorkingMessage: (msg?: string) => void): void {
   setStyledWorkingMessage(setWorkingMessage, getNextVibeFromFile());
 }
 
-function describeToolAction(toolName: string, toolInput: Record<string, unknown>): string {
-  const path = typeof toolInput.path === "string" ? toolInput.path : undefined;
-  const command = typeof toolInput.command === "string" ? toolInput.command : undefined;
-  const query = typeof toolInput.query === "string" ? toolInput.query : undefined;
-
-  if (toolName === "read" && path) return `Reading file: ${path}`;
-  if (toolName === "write" && path) return `Writing file: ${path}`;
-  if (toolName === "edit" && path) return `Editing file: ${path}`;
-  if ((toolName === "bash" || toolName === "shell") && command) return `Running command: ${command}`;
-  if (query) return `Searching for: ${query}`;
-
-  return `Using ${toolName} tool`;
-}
-
 async function generateAndUpdate(
   prompt: string, 
   setWorkingMessage: (msg?: string) => void,
@@ -662,24 +648,20 @@ export function onVibeAgentStart(): void {
 }
 
 export function onVibeToolCall(
-  toolName: string,
-  toolInput: Record<string, unknown>,
+  agentContext: string | undefined,
   setWorkingMessage: (msg?: string) => void,
 ): void {
-  // Skip if no theme, not streaming, or no extensionCtx
-  if (!config.theme || !extensionCtx || !isStreaming) return;
-  
-  const hint = describeToolAction(toolName, toolInput);
-  // A late response for the previous action must not overwrite this live update.
-  cancelCurrentGeneration();
-  setStyledWorkingMessage(setWorkingMessage, hint);
+  // Tool names and arguments are implementation details, not agent-authored progress.
+  // Match OMP's intent-oriented progress display: refresh only from assistant text.
+  if (!config.theme || !extensionCtx || !isStreaming || !agentContext?.trim()) return;
 
-  // Keep expensive generated refreshes rate-limited, but always show the live tool action.
   const now = Date.now();
   if (now - lastVibeTime < config.refreshInterval || config.mode === "file") return;
-  
+
+  // Cancel an older generation so its late response cannot replace newer intent.
+  cancelCurrentGeneration();
   lastVibeTime = now;
-  generateAndUpdate(hint, setWorkingMessage);
+  generateAndUpdate(agentContext.trim(), setWorkingMessage);
 }
 
 export function onVibeAgentEnd(setWorkingMessage: (msg?: string) => void): void {

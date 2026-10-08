@@ -441,8 +441,9 @@ test("on-demand vibe generation preserves full text and includes required system
       }),
       (context) => {
         const prompt = (context.messages[0] as any).content[0].text as string;
-        assert.match(prompt, /reading file: src\/current\.ts/i);
+        assert.match(prompt, /updating the current implementation/i);
         assert.doesNotMatch(prompt, /old action from a previous turn/i);
+        assert.doesNotMatch(prompt, /src\/current\.ts|read file|tool/i);
         return fauxAssistantMessage("Inspecting current source...");
       },
     ]);
@@ -482,15 +483,16 @@ test("on-demand vibe generation preserves full text and includes required system
     assert.equal(updates[0], "Channeling star trek");
     assert.ok(updates.includes(longVibe));
 
-    onVibeToolCall("bash", { command: "npm run obsolete-check" }, (message) => updates.push(message));
+    onVibeToolCall("I am checking the previous implementation before changing it.", (message) => updates.push(message));
     const oldCallStart = Date.now();
     while ((!finishOldResponse || registration.state.callCount < 2) && Date.now() - oldCallStart < 1000) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
     assert.ok(finishOldResponse, "the old-action generation should be pending");
 
-    onVibeToolCall("read", { path: "src/current.ts" }, (message) => updates.push(message));
-    assert.equal(updates.at(-1), "Reading file: src/current.ts");
+    const beforeCurrentIntent = updates.length;
+    onVibeToolCall("I found the relevant code and am updating the current implementation.", (message) => updates.push(message));
+    assert.equal(updates.length, beforeCurrentIntent, "tool calls should not display synthesized action labels");
     const toolCallStart = Date.now();
     while ((!updates.includes("Inspecting current source") || registration.state.callCount < 3) && Date.now() - toolCallStart < 1000) {
       await new Promise((resolve) => setTimeout(resolve, 10));

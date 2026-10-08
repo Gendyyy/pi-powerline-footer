@@ -452,14 +452,14 @@ Working-vibe text has a subtle animated shimmer by default while Pi is working, 
 
 **Prompt template variables (generate mode only):**
 - `{theme}` — the current vibe theme (e.g., "star trek", "mafia")
-- `{task}` — context hint (user prompt initially, then agent's response text or tool info on refresh)
+- `{task}` — context hint (user prompt initially, then the assistant's latest text on refresh; tool names and arguments are not used)
 - `{exclude}` — recent vibes to avoid (auto-populated, e.g., "Don't use: vibe1, vibe2...")
 
 **How it works:**
 1. When you send a message, shows "Channeling {theme}..." placeholder
 2. AI generates a themed message in the background (3s timeout)
 3. Message updates to the themed version (e.g., "Engaging warp drive...")
-4. During long tasks, refreshes on tool calls (rate-limited, default 30s)
+4. During long tasks, refreshes from the assistant's latest intent text (rate-limited, default 30s); raw tool names, commands, and file paths are never shown as vibe messages
 5. Cost and latency depend on your configured `workingVibeModel`
 
 ## Thinking Level Display
